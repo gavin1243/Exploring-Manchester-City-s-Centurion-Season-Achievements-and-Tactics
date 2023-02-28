@@ -1,0 +1,869 @@
+---
+title: "Project 1"
+author: "Pushkar Dhabe, Gavin Dsa, Mohit Chhajed"
+date: "31/10/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+## Manchester City's Centurion Season (17-18)
+
+Our objective is to analyse and assess Manchester City's performance in the premier league season 2017-18 during which they achieved a historical total of 100 points. A feat that no team had done before.
+
+### Question 1
+How did Manchester City fare against the rest of the teams?
+
+```{r }
+library(tidyr)
+library(dplyr)  
+library(magrittr)
+library(stringr)
+library(lubridate)
+library(stringr)
+library(lemon)
+library(knitr)
+library(ggplot2)
+library(gridExtra)
+library(readxl)
+library(data.table)
+library(ggradar)
+
+setwd("C:/Users/pushk/Documents/Project 1/Tentative Final Datasets/Others")
+
+Squad_std_stats<- read_excel("Squad Standard Stats 17_18.xlsx",skip=1)
+
+names(Squad_std_stats)[names(Squad_std_stats)=='Gls...9']<-"Goals"
+names(Squad_std_stats)[names(Squad_std_stats)=='Ast...10']<-"Assists"
+
+
+
+Squad_std_stats_longform<-melt(Squad_std_stats)
+
+
+Squad_std_stats_longform<- Squad_std_stats_longform %>%
+  filter(variable=="Goals" | variable=="Assists")%>%
+  select(-c("CrdY","CrdR"))
+
+
+G_A_Plot<-
+  Squad_std_stats_longform %>%
+  ggplot(aes(fill=variable,y=value,x=Squad)) + 
+  geom_bar(position="stack", stat="identity") +
+  ggtitle("Goals+Assists")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+Squad_gca_sca_stats<- read_excel("Squad Goal and Shot Creation 17_18.xlsx",skip=1)
+
+Squad_gca_sca_stats_longform<-melt(Squad_gca_sca_stats)
+
+Squad_gca_sca_stats_longform<- Squad_gca_sca_stats_longform %>%
+  filter(variable=="GCA" | variable=="SCA")
+
+GCA_SCA_Plot<-
+  Squad_gca_sca_stats_longform %>%
+  ggplot(aes(fill=variable,y=value,x=Squad)) + 
+  geom_bar(position="stack", stat="identity") +
+  ggtitle("GCA+SCA")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+grid.arrange(G_A_Plot,GCA_SCA_Plot,nrow=2)
+
+
+Squad_def_action_stats<- read_excel("Squad Defensive Actions 17_18.xlsx",skip=1)
+
+Squad_def_action_stats_longform<-melt(Squad_def_action_stats)
+
+Squad_def_action_stats_longform<- Squad_def_action_stats_longform %>%
+  filter(variable=="Blocks" | variable=="Int" | variable=="TklW" | variable=="Clr")
+
+
+Squad_def_action_stats_longform %>%
+  ggplot(aes(fill=variable,y=value,x=Squad)) + 
+  geom_bar(position="stack", stat="identity") +
+  ggtitle("Squad Defence Action")+
+  ylim(-100,3000)+
+  coord_polar(start=0)
+
+squad_possession_17_18<- read_excel("Squad Possession Stats 17_18.xlsx",skip=1)
+
+squad_possession_17_18_longform <- melt(squad_possession_17_18)
+
+poss1<-  
+  squad_possession_17_18_longform %>%
+  filter(variable=="Def 3rd") %>%
+  ggplot(aes(fill=variable, y=value, x=Squad, color=value)) +
+  ggtitle("Touches in the Defensive Third")+
+  geom_point(position="stack", stat="identity") +
+  geom_text(aes(label=Squad),size=2,angle=90,hjust=1.1, vjust=1) +
+  theme(axis.text.x=element_blank())
+
+poss2<-  
+  squad_possession_17_18_longform %>%
+  filter(variable=="Mid 3rd") %>%
+  ggplot(aes(fill=variable, y=value, x=Squad,color=value)) +
+  ggtitle("Touches in the Middle Third")+
+  geom_point(position="stack", stat="identity") +
+  geom_text(aes(label=Squad),size=2,angle=90,hjust=1.1, vjust=1) +
+  theme(axis.text.x=element_blank())
+
+poss3<-  
+  squad_possession_17_18_longform %>%
+  filter(variable=="Att 3rd") %>%
+  ggplot(aes(fill=variable, y=value, x=Squad, color=value)) +
+  ggtitle("Touches in the Attacking Third")+
+  geom_point(position="stack", stat="identity") +
+  geom_text(aes(label=Squad),size=2,angle=90,hjust=1.1, vjust=1) +
+  theme(axis.text.x=element_blank())
+
+grid.arrange(poss3,poss2,poss1,nrow=3)
+
+```
+Clearly, Manchester City has scored the most and assisted the most as well. They also created the most number of actions that led to a chance at a shot/goal.
+
+The interesting part about the number of touches Manchester City's players take in any part of the field tells us about their playing psychology. As we can see, they have the highest number of touches in the Attacking and Middle Third of the field and are 6th in the number  of touches in the Defensive Third. This confirms our hypothesis of Manchester City wanting to keep possession away from their goal so that any error by their players or any swift action by the opposing players wouldn't cause an immediate threat on goal.
+
+
+Since Manchester City accumulated 100 points, they would have beaten the smaller teams but how did they fare against the rest of the top 6?
+
+### Question 2
+How did Manchester City fare against Arsenal?
+
+```{r }
+setwd("C:/Users/pushk/Documents/Project 1/Tentative Final Datasets/17-18")
+file.list_17_18 <- list.files(pattern='*.xlsx')
+df.list_17_18 <- lapply(file.list_17_18, read_excel,skip=1)
+
+#Giving attibutes to the list
+attr(df.list_17_18, "names") <- file.list_17_18
+names(df.list_17_18) <- file.list_17_18
+setattr(df.list_17_18, "names", file.list_17_18)
+
+#Converting every element inside the list to a data frame, ie a list of data frames
+i<-1
+for(i in 1:length(df.list_17_18)){
+  df.list_17_18[[i]]<-as.data.frame(df.list_17_18[[i]])
+}
+
+#Removing last row from every data frame since it contained the grand totals
+j<-1
+for(j in 1:length(df.list_17_18)){
+  df.list_17_18[[j]]<-
+    df.list_17_18[[j]]%>%
+    slice(1:(nrow(df.list_17_18[[j]])-1))
+}
+
+#Changing column names for Summary Tables
+i<-1
+for(i in 1:10){
+  colnames(df.list_17_18[[i*6]])<-c("Player","#","Nation","Pos","Age","Min","Gls","Ast","PK","PKatt","Sh","SoT",         
+                                    "CrdY","CrdR","Touches","Press","Tkl","Int","Blocks","xG","npxG","xA","SCA","GCA",         
+                                    "Cmp","Pass.Att","Cmp%","Pass.Prog","Carries","Carries.Prog","Succ","Dribble.Att")
+}
+
+#Changing column names for Passing Tables
+i<-4
+while(i<=60){
+  colnames(df.list_17_18[[i]])<-c("Player","#","Nation","Pos","Age","Min","Cmp","Pass.Att","Cmp%","Pass.TotDist",
+                                  "Pass.PrgDist","Short.Cmp","Shortpass.Att","Short.Cmp%","Medium.Cmp","Mediumpass.Att",
+                                  "Medium.Cmp%","Long.Cmp","Longpass.Att","Long.Cmp%","Ast","xA","KP","Final.Third",
+                                  "PPA","CrsPA","Pass.Prog")
+  i<-i+6
+}
+
+#Changing column names for Pass Types Tables
+i<-3
+while(i<=60){
+  colnames(df.list_17_18[[i]])<-c("Player","#","Nation","Pos","Age","Min","Pass.Att","Live","Dead","FK","TB","Pass.Press",
+                                  "Sw","Crs","CK","In","Corner.Out","Str","Ground","Low","High","Left","Right","Head",
+                                  "TI","Other","Cmp","Pass.Off","Out","Intd","Opponent.Blocks")
+  i<-i+6
+}
+
+#Changing column names for Defensive Actions Tables
+i<-1
+while(i<=60){
+  colnames(df.list_17_18[[i]])<-c("Player","#","Nation","Pos","Age","Min","Tkl","TklW","Tackles.Def 3rd","Tackles.Mid 3rd",
+                                  "Tackles.Att 3rd","Dribble.Tkl","Vsdribblepast.Att","Tkl%","Past","Press","Pressure.Succ",
+                                  "%","Pressures.Def 3rd","Pressures.Mid 3rd","Pressures.Att 3rd","Blocks","Blocked.Sh",
+                                  "ShSv","Pass","Int","Tkl+Int","Clr","Err")
+  i<-i+6
+}
+
+#Changing column names for Possession Tables
+i<-5
+while(i<=60){
+  colnames(df.list_17_18[[i]])<-c("Player","#","Nation","Pos","Age","Min","Touches","Def Pen","Touches.Def 3rd",
+                                  "Touches.Mid 3rd","Touches.Att 3rd","Att Pen","Touch.Live","Succ","Dribble.Att",
+                                  "Succ%","#Pl","Megs","Carries","TotDist","PrgDist","Carries.Prog","Caries.Third",
+                                  "CPA","Mis","Dis","Targ","Rec","Rec%","Receive.Prog")
+  i<-i+6
+}
+
+#Changing column names for Misc. Stats Tables
+i<-2
+while(i<=60){
+  colnames(df.list_17_18[[i]])<-c("Player","#","Nation","Pos","Age","Min","CrdY","CrdR","2CrdY","Fls","Fld","Off",
+                                  "Crs","Int","TklW","PKwon","PKcon","OG","Recov","Won","Lost","Won%")
+  i<-i+6
+}
+
+
+#Merging all tables for Man City Vs Arsenal (Away fixture for Man City)
+Ars_vs_City<-Reduce(function(x, y) merge(x, y, all=TRUE), df.list_17_18[file.list_17_18[1:6]])
+
+#Merging all tables for Man City Vs Arsenal (Home fixture for Man City)
+City_vs_Ars<-Reduce(function(x, y) merge(x, y, all=TRUE), df.list_17_18[file.list_17_18[31:36]])
+
+#Merging Home and Away stats to get a picture of the overall stats
+City_vs_Ars_total<-
+  merge(Ars_vs_City,City_vs_Ars,all=TRUE)%>%
+  select(-c("#","Nation","Pos","Age"))%>%
+  group_by(Player) %>%
+  summarise_all(funs(sum(., na.rm = TRUE)))  
+
+#Merging all tables for Man City Vs Chelsea (Away fixture for Man City)
+Che_vs_City<-Reduce(function(x, y) merge(x, y, all=TRUE), df.list_17_18[file.list_17_18[7:12]])
+
+#Merging all tables for Man City Vs Chelsea (Home fixture for Man City)
+City_vs_Che<-Reduce(function(x, y) merge(x, y, all=TRUE), df.list_17_18[file.list_17_18[37:42]])
+
+#Merging Home and Away stats to get a picture of the overall stats
+City_vs_Che_total<-
+  merge(Che_vs_City,City_vs_Che,all=TRUE)%>%
+  select(-c("#","Nation","Pos","Age"))%>%
+  group_by(Player) %>%
+  summarise_all(funs(sum(., na.rm = TRUE)))
+
+#Merging all tables for Man City Vs Liverpool (Away fixture for Man City)
+Liv_vs_City<-Reduce(function(x, y) merge(x, y, all=TRUE), df.list_17_18[file.list_17_18[13:18]])
+
+#Merging all tables for Man City Vs Liverpool (Home fixture for Man City)
+City_vs_Liv<-Reduce(function(x, y) merge(x, y, all=TRUE), df.list_17_18[file.list_17_18[43:48]])
+
+#Merging Home and Away stats to get a picture of the overall stats
+City_vs_Liv_total<-
+  merge(Liv_vs_City,City_vs_Liv,all=TRUE)%>%
+  select(-c("#","Nation","Pos","Age"))%>%
+  group_by(Player) %>%
+  summarise_all(funs(sum(., na.rm = TRUE)))
+
+#Merging all tables for Man City Vs Spurs (Away fixture for Man City)
+Spu_vs_City<-Reduce(function(x, y) merge(x, y, all=TRUE), df.list_17_18[file.list_17_18[19:24]])
+
+#Merging all tables for Man City Vs Spurs (Home fixture for Man City)
+City_vs_Spu<-Reduce(function(x, y) merge(x, y, all=TRUE), df.list_17_18[file.list_17_18[49:54]])
+
+#Merging Home and Away stats to get a picture of the overall stats
+City_vs_Spu_total<-
+  merge(Spu_vs_City,City_vs_Spu,all=TRUE)%>%
+  select(-c("#","Nation","Pos","Age"))%>%
+  group_by(Player) %>%
+  summarise_all(funs(sum(., na.rm = TRUE)))
+
+#Merging all tables for Man City Vs Man Utd (Away fixture for Man City)
+Utd_vs_City<-Reduce(function(x, y) merge(x, y, all=TRUE), df.list_17_18[file.list_17_18[25:30]])
+
+#Merging all tables for Man City Vs Man Utd (Home fixture for Man City)
+City_vs_Utd<-Reduce(function(x, y) merge(x, y, all=TRUE), df.list_17_18[file.list_17_18[55:60]])
+
+#Merging Home and Away stats to get a picture of the overall stats
+City_vs_Utd_total<-
+  merge(Utd_vs_City,City_vs_Utd,all=TRUE)%>%
+  select(-c("#","Nation","Pos","Age"))%>%
+  group_by(Player) %>%
+  summarise_all(funs(sum(., na.rm = TRUE)))
+
+
+#Summing all columns to get Manchester City's total stats against Arsenal
+City_Ars_total_colsum<-
+  as.data.frame(
+  City_vs_Ars_total%>%
+    select(-Player)%>%
+    colSums(na.rm=TRUE))
+
+#Transpoing the data frame
+t_City_Ars_total_colsum <- transpose(City_Ars_total_colsum)
+
+# get row and colnames in order
+colnames(t_City_Ars_total_colsum) <- rownames(City_Ars_total_colsum)
+rownames(t_City_Ars_total_colsum) <- colnames(City_Ars_total_colsum)
+rownames(t_City_Ars_total_colsum)<-"City_Ars_total"
+
+#Creating Radar Chart 1 for City vs Arsenal
+t_City_Ars_total_colsum_1<-
+  t_City_Ars_total_colsum%>%
+  select(c("Pass.Prog","KP","PPA","CrsPA"))
+
+max1<-max(t_City_Ars_total_colsum$Pass.Prog,t_City_Ars_total_colsum$KP,t_City_Ars_total_colsum$PPA,t_City_Ars_total_colsum$CrsPA)
+mid1<-max1/2
+t_City_Ars_total_colsum_1<-cbind(Group=1,t_City_Ars_total_colsum_1)
+
+CA1<-ggradar(
+  t_City_Ars_total_colsum_1, 
+  values.radar = c("0", as.character(mid1), as.character(max1)),
+  grid.min = 0, grid.mid = mid1, grid.max = max1
+)+ ggtitle("Passing Radar")
+
+
+#Creating Radar Chart 2 for City vs Arsenal
+t_City_Ars_total_colsum_2<-
+  t_City_Ars_total_colsum%>%
+  select(c("Touches.Def 3rd","Touches.Mid 3rd","Touches.Att 3rd","Att Pen"))
+
+max2<-max(t_City_Ars_total_colsum$`Touches.Def 3rd`,t_City_Ars_total_colsum$`Touches.Mid 3rd`,t_City_Ars_total_colsum$`Touches.Att 3rd`,t_City_Ars_total_colsum$`Att Pen`)
+mid2<-max2/2
+t_City_Ars_total_colsum_2 <- cbind(Group=2, t_City_Ars_total_colsum_2)
+CA2<-ggradar(
+  t_City_Ars_total_colsum_2, 
+  values.radar = c("0", as.character(mid2), as.character(max2)),
+  grid.min = 0, grid.mid = mid2, grid.max = max2
+)+ ggtitle("Touches Radar")
+
+#Creating Radar Chart 3 for City vs Arsenal
+t_City_Ars_total_colsum_3<-
+  t_City_Ars_total_colsum%>%
+  select(c("Blocks","Int","TklW","Clr"))
+
+max3<-max(t_City_Ars_total_colsum$Blocks,t_City_Ars_total_colsum$Int,t_City_Ars_total_colsum$TklW,t_City_Ars_total_colsum$Clr)
+mid3<-max3/2
+t_City_Ars_total_colsum_3 <- cbind(Group=3, t_City_Ars_total_colsum_3)
+CA3<-ggradar(
+  t_City_Ars_total_colsum_3, 
+  values.radar = c("0", as.character(mid3), as.character(max3)),
+  grid.min = 0, grid.mid = mid3, grid.max = max3
+)+ ggtitle("Defensive Actions Radar")
+
+
+#Creating Radar Chart 4 for City vs Arsenal
+t_City_Ars_total_colsum_4<-
+  t_City_Ars_total_colsum%>%
+  select(c("xG","xA","GCA","SCA"))
+
+max4<-max(t_City_Ars_total_colsum$xG,t_City_Ars_total_colsum$xA,t_City_Ars_total_colsum$GCA,t_City_Ars_total_colsum$SCA)
+mid4<-max4/2
+t_City_Ars_total_colsum_4 <- cbind(Group=4, t_City_Ars_total_colsum_4)
+CA4<-ggradar(
+  t_City_Ars_total_colsum_4, 
+  values.radar = c("0", as.character(mid4), as.character(max4)),
+  grid.min = 0, grid.mid = mid4, grid.max = max4
+)+ ggtitle("Actions leading to Goals/Shots Radar")
+
+grid.arrange(CA1,CA2,nrow=2)
+grid.arrange(CA3,CA4,nrow=2)
+
+```
+Manchester City beat Arsenal 3-1 at home and 3-0 away.Manchester City pressed arsenal very high up the pitch, they kept rotating the passes in the middle third from side to side to create any gap that they could attack. They created many actions that led to a shot and were clinical with the passes played into the penalty area. Almost all such passes were key passes.
+
+### Question 3
+How did Manchester City fare against Chelsea?
+
+```{r }
+#Summing all columns to get Manchester City's total stats against Chelsea
+City_Che_total_colsum<-
+  as.data.frame(
+    City_vs_Che_total%>%
+      select(-Player)%>%
+      colSums(na.rm=TRUE))
+
+#Transpoing the data frame
+t_City_Che_total_colsum <- transpose(City_Che_total_colsum)
+
+# get row and colnames in order
+colnames(t_City_Che_total_colsum) <- rownames(City_Che_total_colsum)
+rownames(t_City_Che_total_colsum) <- colnames(City_Che_total_colsum)
+rownames(t_City_Che_total_colsum)<-"City_Che_total"
+
+#Creating Radar Chart 1 for City vs Chelsea
+t_City_Che_total_colsum_1<-
+  t_City_Che_total_colsum%>%
+  select(c("Pass.Prog","KP","PPA","CrsPA"))
+
+max_c_1<-max(t_City_Che_total_colsum$Pass.Prog,t_City_Che_total_colsum$KP,t_City_Che_total_colsum$PPA,t_City_Che_total_colsum$CrsPA)
+mid_c_1<-max_c_1/2
+t_City_Che_total_colsum_1<-cbind(Group=1,t_City_Che_total_colsum_1)
+
+CC1<-ggradar(
+  t_City_Che_total_colsum_1, 
+  values.radar = c("0", as.character(mid_c_1), as.character(max_c_1)),
+  grid.min = 0, grid.mid = mid_c_1, grid.max = max_c_1
+)+ ggtitle("Passing Radar")
+
+
+#Creating Radar Chart 2 for City vs Chelsea
+t_City_Che_total_colsum_2<-
+  t_City_Che_total_colsum%>%
+  select(c("Touches.Def 3rd","Touches.Mid 3rd","Touches.Att 3rd","Att Pen"))
+
+max_c_2<-max(t_City_Che_total_colsum$`Touches.Def 3rd`,t_City_Che_total_colsum$`Touches.Mid 3rd`,t_City_Che_total_colsum$`Touches.Att 3rd`,t_City_Che_total_colsum$`Att Pen`)
+mid_c_2<-max_c_2/2
+t_City_Che_total_colsum_2 <- cbind(Group=2, t_City_Che_total_colsum_2)
+CC2<-ggradar(
+  t_City_Che_total_colsum_2, 
+  values.radar = c("0", as.character(mid_c_2), as.character(max_c_2)),
+  grid.min = 0, grid.mid = mid_c_2, grid.max = max_c_2
+)+ ggtitle("Touches Radar")
+
+#Creating Radar Chart 3 for City vs Chelsea
+t_City_Che_total_colsum_3<-
+  t_City_Che_total_colsum%>%
+  select(c("Blocks","Int","TklW","Clr"))
+
+max_c_3<-max(t_City_Che_total_colsum$Blocks,t_City_Che_total_colsum$Int,t_City_Che_total_colsum$TklW,t_City_Che_total_colsum$Clr)
+mid_c_3<-max_c_3/2
+t_City_Che_total_colsum_3 <- cbind(Group=3, t_City_Che_total_colsum_3)
+CC3<-ggradar(
+  t_City_Che_total_colsum_3, 
+  values.radar = c("0", as.character(mid_c_3), as.character(max_c_3)),
+  grid.min = 0, grid.mid = mid_c_3, grid.max = max_c_3
+)+ ggtitle("Defensive Actions Radar")
+
+
+#Creating Radar Chart 4 for City vs Chelsea
+t_City_Che_total_colsum_4<-
+  t_City_Che_total_colsum%>%
+  select(c("xG","xA","GCA","SCA"))
+
+max_c_4<-max(t_City_Che_total_colsum$xG,t_City_Che_total_colsum$xA,t_City_Che_total_colsum$GCA,t_City_Che_total_colsum$SCA)
+mid_c_4<-max_c_4/2
+t_City_Che_total_colsum_4 <- cbind(Group=4, t_City_Che_total_colsum_4)
+CC4<-ggradar(
+  t_City_Che_total_colsum_4, 
+  values.radar = c("0", as.character(mid_c_4), as.character(max_c_4)),
+  grid.min = 0, grid.mid = mid_c_4, grid.max = max_c_4
+)+ ggtitle("Actions leading to Goals/Shots Radar")
+
+grid.arrange(CC1,CC2,nrow=2)
+grid.arrange(CC3,CC4,nrow=2)
+
+
+```
+The games against Chelsea were different and difficult. They won both, the away and home game 1-0. In both games there were barely any chances created for both teams. This was expected as Chelsea were the champions in the previous season. City were clinical with their chances and converted the biggest chance in both games. City played a very cautious game against Chelsea because of Eden Hazard, Chelsea's talisman.
+
+### Question 4
+How did Manchester City fare against Liverpool?
+
+```{r }
+#Summing all columns to get Manchester City's total stats against Liverpool
+City_Liv_total_colsum<-
+  as.data.frame(
+    City_vs_Liv_total%>%
+      select(-Player)%>%
+      colSums(na.rm=TRUE))
+
+#Transpoing the data frame
+t_City_Liv_total_colsum <- transpose(City_Liv_total_colsum)
+
+# get row and colnames in order
+colnames(t_City_Liv_total_colsum) <- rownames(City_Liv_total_colsum)
+rownames(t_City_Liv_total_colsum) <- colnames(City_Liv_total_colsum)
+rownames(t_City_Liv_total_colsum)<-"City_Liv_total"
+
+#Creating Radar Chart 1 for City vs Liverpool
+t_City_Liv_total_colsum_1<-
+  t_City_Liv_total_colsum%>%
+  select(c("Pass.Prog","KP","PPA","CrsPA"))
+
+max_l_1<-max(t_City_Liv_total_colsum$Pass.Prog,t_City_Liv_total_colsum$KP,t_City_Liv_total_colsum$PPA,t_City_Liv_total_colsum$CrsPA)
+mid_l_1<-max_l_1/2
+t_City_Liv_total_colsum_1<-cbind(Group=1,t_City_Liv_total_colsum_1)
+
+CL1<-ggradar(
+  t_City_Liv_total_colsum_1, 
+  values.radar = c("0", as.character(mid_l_1), as.character(max_l_1)),
+  grid.min = 0, grid.mid = mid_l_1, grid.max = max_l_1
+)+ ggtitle("Passing Radar")
+
+
+#Creating Radar Chart 2 for City vs Liverpool
+t_City_Liv_total_colsum_2<-
+  t_City_Liv_total_colsum%>%
+  select(c("Touches.Def 3rd","Touches.Mid 3rd","Touches.Att 3rd","Att Pen"))
+
+max_l_2<-max(t_City_Liv_total_colsum$`Touches.Def 3rd`,t_City_Liv_total_colsum$`Touches.Mid 3rd`,t_City_Liv_total_colsum$`Touches.Att 3rd`,t_City_Liv_total_colsum$`Att Pen`)
+mid_l_2<-max_l_2/2
+t_City_Liv_total_colsum_2 <- cbind(Group=2, t_City_Liv_total_colsum_2)
+CL2<-ggradar(
+  t_City_Liv_total_colsum_2, 
+  values.radar = c("0", as.character(mid_l_2), as.character(max_l_2)),
+  grid.min = 0, grid.mid = mid_l_2, grid.max = max_l_2
+)+ ggtitle("Touches Radar")
+
+#Creating Radar Chart 3 for City vs Liverpool
+t_City_Liv_total_colsum_3<-
+  t_City_Liv_total_colsum%>%
+  select(c("Blocks","Int","TklW","Clr"))
+
+max_l_3<-max(t_City_Liv_total_colsum$Blocks,t_City_Liv_total_colsum$Int,t_City_Liv_total_colsum$TklW,t_City_Liv_total_colsum$Clr)
+mid_l_3<-max_l_3/2
+t_City_Liv_total_colsum_3 <- cbind(Group=3, t_City_Liv_total_colsum_3)
+CL3<-ggradar(
+  t_City_Liv_total_colsum_3, 
+  values.radar = c("0", as.character(mid_l_3), as.character(max_l_3)),
+  grid.min = 0, grid.mid = mid_l_3, grid.max = max_l_3
+)+ ggtitle("Defensive Actions Radar")
+
+
+#Creating Radar Chart 4 for City vs Liverpool
+t_City_Liv_total_colsum_4<-
+  t_City_Liv_total_colsum%>%
+  select(c("xG","xA","GCA","SCA"))
+
+max_l_4<-max(t_City_Liv_total_colsum$xG,t_City_Liv_total_colsum$xA,t_City_Liv_total_colsum$GCA,t_City_Liv_total_colsum$SCA)
+mid_l_4<-max_l_4/2
+t_City_Liv_total_colsum_4 <- cbind(Group=4, t_City_Liv_total_colsum_4)
+CL4<-ggradar(
+  t_City_Liv_total_colsum_4, 
+  values.radar = c("0", as.character(mid_l_4), as.character(max_l_4)),
+  grid.min = 0, grid.mid = mid_l_4, grid.max = max_l_4
+)+ ggtitle("Actions leading to Goals/Shots Radar")
+
+grid.arrange(CL1,CL2,nrow=2)
+grid.arrange(CL3,CL4,nrow=2)
+
+
+```
+Manchester City beat Liverpool 5-0 at home. A thumping victory but they lost 4-3 away. Even in the loss they were very clinical and gave a silly goal that turned out to be decisive. City had the majority of possession and created many opportunities to shoot but the shots weren't on target. The 4 that were, they scored 3. City with their possession game nearly nullified Liverpool's tactics in both games. The 4-3 loss was still a great game for the neutrals.
+
+### Question 5
+How did Manchester City fare against Tottenham Hotspurs?
+
+```{r }
+#Summing all columns to get Manchester City's total stats against Spurs
+City_Spu_total_colsum<-
+  as.data.frame(
+    City_vs_Spu_total%>%
+      select(-Player)%>%
+      colSums(na.rm=TRUE))
+
+#Transpoing the data frame
+t_City_Spu_total_colsum <- transpose(City_Spu_total_colsum)
+
+# get row and colnames in order
+colnames(t_City_Spu_total_colsum) <- rownames(City_Spu_total_colsum)
+rownames(t_City_Spu_total_colsum) <- colnames(City_Spu_total_colsum)
+rownames(t_City_Spu_total_colsum)<-"City_Spu_total"
+
+#Creating Radar Chart 1 for City vs Spurs
+t_City_Spu_total_colsum_1<-
+  t_City_Spu_total_colsum%>%
+  select(c("Pass.Prog","KP","PPA","CrsPA"))
+
+max_s_1<-max(t_City_Spu_total_colsum$Pass.Prog,t_City_Spu_total_colsum$KP,t_City_Spu_total_colsum$PPA,t_City_Spu_total_colsum$CrsPA)
+mid_s_1<-max_s_1/2
+t_City_Spu_total_colsum_1<-cbind(Group=1,t_City_Spu_total_colsum_1)
+
+CS1<-ggradar(
+  t_City_Spu_total_colsum_1, 
+  values.radar = c("0", as.character(mid_s_1), as.character(max_s_1)),
+  grid.min = 0, grid.mid = mid_s_1, grid.max = max_s_1
+)+ ggtitle("Passing Radar")
+
+
+#Creating Radar Chart 2 for City vs Spurs
+t_City_Spu_total_colsum_2<-
+  t_City_Spu_total_colsum%>%
+  select(c("Touches.Def 3rd","Touches.Mid 3rd","Touches.Att 3rd","Att Pen"))
+
+max_s_2<-max(t_City_Spu_total_colsum$`Touches.Def 3rd`,t_City_Spu_total_colsum$`Touches.Mid 3rd`,t_City_Spu_total_colsum$`Touches.Att 3rd`,t_City_Spu_total_colsum$`Att Pen`)
+mid_s_2<-max_s_2/2
+t_City_Spu_total_colsum_2 <- cbind(Group=2, t_City_Spu_total_colsum_2)
+CS2<-ggradar(
+  t_City_Spu_total_colsum_2, 
+  values.radar = c("0", as.character(mid_s_2), as.character(max_s_2)),
+  grid.min = 0, grid.mid = mid_s_2, grid.max = max_s_2
+)+ ggtitle("Touches Radar")
+
+#Creating Radar Chart 3 for City vs Spurs
+t_City_Spu_total_colsum_3<-
+  t_City_Spu_total_colsum%>%
+  select(c("Blocks","Int","TklW","Clr"))
+
+max_s_3<-max(t_City_Spu_total_colsum$Blocks,t_City_Spu_total_colsum$Int,t_City_Spu_total_colsum$TklW,t_City_Spu_total_colsum$Clr)
+mid_s_3<-max_s_3/2
+t_City_Spu_total_colsum_3 <- cbind(Group=3, t_City_Spu_total_colsum_3)
+CS3<-ggradar(
+  t_City_Spu_total_colsum_3, 
+  values.radar = c("0", as.character(mid_s_3), as.character(max_s_3)),
+  grid.min = 0, grid.mid = mid_s_3, grid.max = max_s_3
+)+ ggtitle("Defensive Actions Radar")
+
+
+#Creating Radar Chart 4 for City vs Spurs
+t_City_Spu_total_colsum_4<-
+  t_City_Spu_total_colsum%>%
+  select(c("xG","xA","GCA","SCA"))
+
+max_s_4<-max(t_City_Spu_total_colsum$xG,t_City_Spu_total_colsum$xA,t_City_Spu_total_colsum$GCA,t_City_Spu_total_colsum$SCA)
+mid_s_4<-max_s_4/2
+t_City_Spu_total_colsum_4 <- cbind(Group=4, t_City_Spu_total_colsum_4)
+CS4<-ggradar(
+  t_City_Spu_total_colsum_4, 
+  values.radar = c("0", as.character(mid_s_4), as.character(max_s_4)),
+  grid.min = 0, grid.mid = mid_s_4, grid.max = max_s_4
+)+ ggtitle("Actions leading to Goals/Shots Radar")
+
+grid.arrange(CS1,CS2,nrow=2)
+grid.arrange(CS3,CS4,nrow=2)
+
+
+```
+Manchester City beat Tottenham Hotspurs 4-1 at home and 3-1 away. Even though the scoreline says so, the games were a lot more closer. City couldn't keep as much possession as they'd like to keep but they created more goal and shot creating actions and were highly clinical with them. Both the teams applied a lot of pressure on each other thus the number of touches in the defensive and middle third are a lot more than the touches in the attacking third. City's defense had to work a lot harder too thus having more interceptions and blocks than usual.
+
+### Question 6
+How did Manchester City fare against Manchester United?
+
+``` {r }
+#Summing all columns to get Manchester City's total stats against Man Utd
+City_Utd_total_colsum<-
+  as.data.frame(
+    City_vs_Utd_total%>%
+      select(-Player)%>%
+      colSums(na.rm=TRUE))
+
+#Transpoing the data frame
+t_City_Utd_total_colsum <- transpose(City_Utd_total_colsum)
+
+# get row and colnames in order
+colnames(t_City_Utd_total_colsum) <- rownames(City_Utd_total_colsum)
+rownames(t_City_Utd_total_colsum) <- colnames(City_Utd_total_colsum)
+rownames(t_City_Utd_total_colsum)<-"City_Utd_total"
+
+#Creating Radar Chart 1 for City vs Man Utd
+t_City_Utd_total_colsum_1<-
+  t_City_Utd_total_colsum%>%
+  select(c("Pass.Prog","KP","PPA","CrsPA"))
+
+max_u_1<-max(t_City_Utd_total_colsum$Pass.Prog,t_City_Utd_total_colsum$KP,t_City_Utd_total_colsum$PPA,t_City_Utd_total_colsum$CrsPA)
+mid_u_1<-max_u_1/2
+t_City_Utd_total_colsum_1<-cbind(Group=1,t_City_Utd_total_colsum_1)
+
+CU1<-ggradar(
+  t_City_Utd_total_colsum_1, 
+  values.radar = c("0", as.character(mid_u_1), as.character(max_u_1)),
+  grid.min = 0, grid.mid = mid_u_1, grid.max = max_u_1
+)+ ggtitle("Passing Radar")
+
+
+#Creating Radar Chart 2 for City vs Man Utd
+t_City_Utd_total_colsum_2<-
+  t_City_Utd_total_colsum%>%
+  select(c("Touches.Def 3rd","Touches.Mid 3rd","Touches.Att 3rd","Att Pen"))
+
+max_u_2<-max(t_City_Utd_total_colsum$`Touches.Def 3rd`,t_City_Utd_total_colsum$`Touches.Mid 3rd`,t_City_Utd_total_colsum$`Touches.Att 3rd`,t_City_Utd_total_colsum$`Att Pen`)
+mid_u_2<-max_u_2/2
+t_City_Utd_total_colsum_2 <- cbind(Group=2, t_City_Utd_total_colsum_2)
+CU2<-ggradar(
+  t_City_Utd_total_colsum_2, 
+  values.radar = c("0", as.character(mid_u_2), as.character(max_u_2)),
+  grid.min = 0, grid.mid = mid_u_2, grid.max = max_u_2
+)+ ggtitle("Touches Radar")
+
+#Creating Radar Chart 3 for City vs Man Utd
+t_City_Utd_total_colsum_3<-
+  t_City_Utd_total_colsum%>%
+  select(c("Blocks","Int","TklW","Clr"))
+
+max_u_3<-max(t_City_Utd_total_colsum$Blocks,t_City_Utd_total_colsum$Int,t_City_Utd_total_colsum$TklW,t_City_Utd_total_colsum$Clr)
+mid_u_3<-max_u_3/2
+t_City_Utd_total_colsum_3 <- cbind(Group=3, t_City_Utd_total_colsum_3)
+CU3<-ggradar(
+  t_City_Utd_total_colsum_3, 
+  values.radar = c("0", as.character(mid_u_3), as.character(max_u_3)),
+  grid.min = 0, grid.mid = mid_u_3, grid.max = max_u_3
+)+ ggtitle("Defensive Actions Radar")
+
+
+#Creating Radar Chart 4 for City vs Man Utd
+t_City_Utd_total_colsum_4<-
+  t_City_Utd_total_colsum%>%
+  select(c("xG","xA","GCA","SCA"))
+
+max_u_4<-max(t_City_Utd_total_colsum$xG,t_City_Utd_total_colsum$xA,t_City_Utd_total_colsum$GCA,t_City_Utd_total_colsum$SCA)
+mid_u_4<-max_u_4/2
+t_City_Utd_total_colsum_4 <- cbind(Group=4, t_City_Utd_total_colsum_4)
+CU4<-ggradar(
+  t_City_Utd_total_colsum_4, 
+  values.radar = c("0", as.character(mid_u_4), as.character(max_u_4)),
+  grid.min = 0, grid.mid = mid_u_4, grid.max = max_u_4
+)+ ggtitle("Actions leading to Goals/Shots Radar")
+
+grid.arrange(CU1,CU2,nrow=2)
+grid.arrange(CU3,CU4,nrow=2)
+
+```
+Manchester City beat Manchester United 2-1 away(at Old Trafford) but Manchester United beat Manchester City 3-2 at home(at Etihad). Manchester City pressed Manchester united a lot, this can be seen by the number of touches city had in their mid and attacking third of the field. United were a little more clinical in their win but overall city created a lot more chances that led to a chance at goal or a shot. United came in with a gameplan to play on the counter city's preogressive passes were more. This is also why city didn't have so many touches in their defensive third.
+
+### Question 7
+Who was their most important player they bought that had the biggest impact on this season?
+
+```{r }
+
+setwd("C:/Users/pushk/Documents/Project 1/Tentative Final Datasets/Others")
+GK_stats<- read_excel("Player Advanced Goalkeeping 17_18.xlsx",skip=1)
+
+GK_stats_GA<- GK_stats %>%
+  filter(`90s`>=20)%>%
+  select(Player,Squad,GA)
+
+GK_stats_OPA<- GK_stats %>%
+  filter(`90s`>=20)%>%
+  select(Player,Squad,`#OPA`)
+
+
+GK_stats_GA_longform<-melt(GK_stats_GA)
+
+GK_stats_GA_longform %>%
+  ggplot(aes(fill=variable,y=value,x=Player)) +
+  geom_bar(stat="identity") +
+  ggtitle("Goals Conceded by Goalkeepers") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+GK_stats_OPA_longform<-melt(GK_stats_OPA)
+
+GK_stats_OPA_longform %>%
+  ggplot(aes(fill=variable,y=value,x=Player)) +
+  geom_bar(stat="identity") +
+  ggtitle("Number of Defensive Actions outside Penalty Area by Goalkeepers")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+
+```
+The goalkeepers selected have played atleast 20 matches in the league. It is evident that Ederson conceded the least number of goals. Ederson also acted as a sweeper keeper since Manchester City pressed their opponents with a high line, therefore he has also made the most number of defensive actions outside the Penalty Area. He also positioned his defense very well which led to fewer errors at the back.
+
+### Question 8
+Which were the most important players in the category of Forwards, Midfielders and Defenders in the entire league?
+
+```{r }
+setwd("C:/Users/pushk/Documents/Project 1/Tentative Final Datasets/Others")
+players <- read_excel("all player standard stats 17-18.xlsx", skip = 1)
+
+Playernames_summary <-
+  players %>% 
+  mutate(Playername=Player) %>% 
+  separate(Player, c("actualname","Name"), "\\\\")%>%
+  select(c("Name","Squad","Gls...12","Ast...13"))
+
+colnames(Playernames_summary)<-c("Name","Squad","Goals","Assists")
+
+players_passing <- read_excel("all player passing stats 17-18.xlsx", skip = 1)
+
+Playernames_passing<-
+  players_passing %>% 
+  mutate(Playername=Player) %>% 
+  separate(Player, c("actualname","Name"), "\\\\")%>%
+  select(c("Name","Squad","Prog","KP"))
+
+
+players_defensive <- read_excel("all player defensive actions stats 17-18.xlsx", skip = 1)
+
+playernames_defensive<-
+  players_defensive %>% 
+  mutate(Playername=Player) %>% 
+  separate(Player, c("actualname","Name"), "\\\\")%>%
+  select(c("Name","Squad","Blocks","Int","Tkl...9","Clr","Press"))
+
+colnames(playernames_defensive)<-c("Name","Squad","Blocks","Int","Tkl","Clr","Press")
+
+
+players_possession <- read_excel("all player possession stats 17-18.xlsx", skip = 1)
+
+playernames_possession<-
+  players_possession %>% 
+  mutate(Playername=Player) %>% 
+  separate(Player, c("actualname","Name"), "\\\\")%>%
+  select(c("Name","Squad","Prog...24","Att Pen"))
+
+colnames(playernames_possession)<-c("Name","Squad","Carries.Prog","Att Pen")
+
+
+players_shooting <- read_excel("all player shooting stats 17-18.xlsx", skip = 1)
+
+playernames_shooting<-
+  players_shooting %>% 
+  mutate(Playername=Player) %>% 
+  separate(Player, c("actualname","Name"), "\\\\")%>%
+  select(c("Name","Squad","SoT"))
+
+players_creation <- read_excel("all player creation stats 17-18.xlsx", skip = 1)
+
+playernames_creation<-
+  players_creation %>% 
+  mutate(Playername=Player) %>% 
+  separate(Player, c("actualname","Name"), "\\\\")%>%
+  select(c("Name","Squad","SCA","GCA"))
+
+mvp_df<-
+  Reduce(function(x,y) merge(x,y,all=TRUE),list(Playernames_summary,Playernames_passing,playernames_defensive,playernames_possession,playernames_shooting,playernames_creation))
+
+
+
+defmvp<- mvp_df%>%group_by(Name,Squad)%>%
+  mutate(defendermvp=sum(Press/4,Tkl,Int,Blocks,Clr,na.rm = TRUE))%>%
+  arrange(desc(defendermvp))
+
+defmvp<-defmvp[1:10,]
+
+defmvp<-
+defmvp%>%
+  select(Name,Squad,defendermvp)
+kable(defmvp, caption="Defender MVPs")
+kable(
+  defmvp%>%
+    group_by(Squad)%>%
+    summarise(total=n())%>%
+    arrange(desc(total)),
+  caption = "Number of Defender MVPS"
+)
+
+
+midmvp<- mvp_df%>%group_by(Name,Squad)%>%
+  mutate(midfmvp=sum(SCA,GCA*3,Carries.Prog,Prog,na.rm = TRUE))%>%
+  arrange(desc(midfmvp))
+
+midmvp<-midmvp[1:10,]
+
+midmvp<-
+  midmvp%>%
+  select(Name,Squad,midfmvp)
+
+kable(midmvp, caption="Midfield MVPs")
+kable(
+  midmvp%>%
+    group_by(Squad)%>%
+    summarise(total=n())%>%
+    arrange(desc(total)),
+  caption = "Number of Midfielder MVPS"
+)
+
+
+fwdmvp<- mvp_df%>%group_by(Name,Squad)%>%
+  mutate(forwardmvp=sum(Goals*2,Assists*2,SoT,`Att Pen`/3,na.rm = TRUE))%>%
+  arrange(desc(forwardmvp))
+
+fwdmvp<-fwdmvp[1:10,]
+
+fwdmvp<-
+  fwdmvp%>%
+  select(Name,Squad,forwardmvp)
+
+kable(fwdmvp, caption="Forward MVPs")
+kable(
+  fwdmvp%>%
+    group_by(Squad)%>%
+    summarise(total=n())%>%
+    arrange(desc(total)),
+  caption = "Number of Forward MVPS"
+)
+
+
+```
+Manchester City had atleast 3 MVPs in the Forwards and Midfielders category. Unluckily, injuries haunted the Manchester City Defenders. We calculated the most valuable players in each position using various metrics.
+To calculate the "defendermvp" score we used: "Press" which tells us about how the player applied pressure to the opposition team. We also used tackles, interceptions, blocks and clearances as important metrics for a defender.
+
+To calculate the "midfieldermvp" score we used: SCA, GCA, Progressive Carries, Key Passes, and Progressive Passes.
+
+To calculate the "forwardmvp" score we used: Goals, Assists, and touches in the penalty area of the opposition.
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
